@@ -1,0 +1,151 @@
+---
+title: "1261 HW 5"
+author: "Sam Sadow"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#1. Youngest Male Names
+```{r, warning=FALSE,message=FALSE}
+library(Hmisc)
+library(mdsr)
+library(babynames)
+BabynamesDist <- make_babynames_dist()
+```
+
+```{r}
+com_men <-BabynamesDist %>% 
+  filter(sex == "M") %>% 
+  group_by(name) %>% 
+  mutate(N=n()) %>% 
+  filter(N>=4) %>% 
+  summarise(
+    est_num_alive = sum(est_alive_today),
+    q1_age = wtd.quantile(age_today, est_alive_today, probs = 0.25),
+    med_age = wtd.quantile(age_today, est_alive_today, probs = 0.5),
+    q3_age = wtd.quantile(age_today, est_alive_today, probs = 0.75)
+  ) %>% 
+  filter(est_num_alive >= 100000) %>% 
+  arrange(med_age) %>% 
+  head(25)
+com_men[1:10,]
+```
+
+```{r}
+m_plot <- ggplot(
+  data = com_men,
+  aes(x=reorder(name, -med_age), y=med_age)
+) +
+  ylim(5,30) +
+  xlab(NULL) +
+  ylab("Age (in years)") +
+  ggtitle("Youngest Male Names")
+```
+
+```{r, warning=FALSE,message=FALSE}
+m_plot +
+  geom_linerange(
+    aes(ymin = q1_age, ymax = q3_age),
+    color = "#56B4E9",
+    size = 4,
+    alpha = 0.8
+  ) +
+  geom_point(fill = "#ed3324", colour = "white", size = 3, shape = 21) +
+  geom_point(aes(y=25.5,x=24), fill = "#ed3324", colour = "white", size = 3, shape = 21) +
+  geom_text(aes(y=27.5,x=24),label="median",cex=3.8)+
+  geom_text(aes(y=10,x=15),label="25th",cex=3.8)+
+  geom_text(aes(y=19,x=15),label="75th percentile",cex=3.8)+
+  geom_point(aes(y=8.5,x=15),shape=17)+
+  geom_point(aes(y=21.5,x=15),shape=17)+
+  geom_hline(data = com_men,  yintercept =c(5,10,15,20,25,30), linetype=3) +
+  coord_flip()
+```
+
+#2 Ten Closet Ratio Years
+```{r}
+?mutate
+library(dplyr)
+
+babynames2 <- babynames %>% 
+  filter(name == "Jackie") %>% 
+  group_by(year) %>% 
+  summarise(
+    N=n(),
+    total = sum(n),
+    boys = sum(ifelse(sex=="M", n, 0))
+  ) %>% 
+  mutate(ratio = abs(0.5-(boys/total)))
+#head(babynames2 %>% arrange(ratio), 10)
+head(babynames2 %>% arrange(ratio), 10)$year
+```
+
+#3
+```{r}
+babyname1<- babynames %>% 
+  group_by(year) %>% 
+  summarise(
+    N=n(),
+    total = sum(n)
+  ) %>% 
+  arrange(desc(total)) %>% 
+  head(1)
+babyname1$year
+```
+
+#4
+```{r}
+babynames4 <- babynames %>% #filter(name=="Jackie") %>% 
+  group_by(name) %>% 
+  mutate(early = min(year), late = max(year))
+babynames4[c(1, 305:310, 900:950),]
+```
+
+#5
+```{r}
+babyname <- head(babynames4 %>% 
+                   filter(prop >= 0.01) %>% 
+                   arrange(desc(early)),1)#$name
+babyname
+```
+
+#6
+```{r}
+baybnames5 <- babynames %>% 
+  group_by(year) %>% 
+  summarise(namesused = n(), namesusedM=sum(ifelse(sex=="M",1,0)), namesusedF=sum(ifelse(sex=="F",1,0)))
+
+baybnames5
+```
+```{r}
+tryit <- ggplot(baybnames5, aes(x= year)) + 
+  geom_line(color = "green", aes(y=namesused)) +
+  geom_line(color = "blue", aes(y=namesusedM)) +
+  geom_line(color = "red", aes(y=namesusedF))
+  
+
+tryit
+  
+```
+Green is number of names used for all names.
+
+Red is number of names used for female names.
+
+Blue is number of names used for male names.
+
+#7
+```{r}
+nineties <- babynames %>% 
+  filter(year >= 1990 & year < 2000) %>% 
+  group_by(name) %>% 
+  summarise(total = sum(n)) %>% 
+  arrange(desc(total)) 
+
+nineties
+```
+
+The most common name in the nineties for males was Joshua and the most popular name for girls was Jessica.
